@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Game of Life</title>
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/svg+xml" href="fav.svg">
+  
+  <style>
+    /* --- PERFECT RESET --- */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    html, body {
+      background: #0a0a0a;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      min-height: 100dvh;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Segoe UI', Roboto, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+    }
+    
+    #main-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      padding: 20px;
+      gap: 8px;
+    }
+    
+    .title-bar {
+      text-align: center;
+      flex-shrink: 0;
+      padding: 2px 0;
+      width: 100%;
+    }
+    .title-bar .title {
+      font-size: 22px;
+      font-weight: 300;
+      letter-spacing: 8px;
+      color: rgba(255,255,255,0.85);
+      text-transform: uppercase;
+    }
+    .title-bar .title .accent {
+      color: #c9a84c;
+      font-weight: 400;
+    }
+    
+    #canvas-container {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      min-height: 0;
+      padding: 0 10px;
+      position: relative;
+    }
+    
+    /* --- P5 CANVAS --- */
+    #p5canvas {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      height: 100%;
+      box-shadow: 0 0 80px rgba(0,0,0,0.9);
+      border-radius: 2px;
+      overflow: hidden;
+      position: relative;
+      background: #0a0a0a;
+    }
+    
+    #p5canvas canvas {
+      display: block !important;
+      max-width: 100%;
+      max-height: 100%;
+      width: auto !important;
+      height: auto !important;
+      object-fit: contain;
+      border-radius: 2px;
+      image-rendering: pixelated;
+    }
+    
+    /* --- SHIRT MOCKUP --- */
+    #shirt-mockup {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      max-width: 100%;
+      max-height: 100%;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      border-radius: 2px;
+      box-shadow: 0 0 80px rgba(0,0,0,0.9);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    #shirt-mockup.active {
+      display: block;
+      animation: fadeIn 0.6s ease;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
+      to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    }
+    
+    /* --- BOTTOM BAR --- */
+    .bottom-bar {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      gap: 6px;
+      padding: 4px 0;
+    }
+    
+    .controls-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .controls {
+      color: rgba(255,255,255,0.7);
+      background: rgba(255,255,255,0.04);
+      padding: 8px 20px;
+      border-radius: 30px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Segoe UI', Roboto, Arial, sans-serif;
+      font-size: 11px;
+      font-weight: 400;
+      border: 1px solid rgba(255,255,255,0.08);
+      text-align: center;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: all 0.3s ease;
+      letter-spacing: 0.8px;
+      touch-action: manipulation;
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    .controls:hover {
+      color: rgba(255,255,255,0.95);
+      border-color: rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.08);
+    }
+    .controls:active {
+      transform: scale(0.95);
+    }
+    .controls .key {
+      color: rgba(255,255,255,0.5);
+      font-weight: 300;
+    }
+    .controls .sep {
+      color: rgba(255,255,255,0.15);
+      margin: 0 4px;
+    }
+    
+    .controls.shirt-btn {
+      border-color: rgba(201, 168, 76, 0.2);
+      color: rgba(201, 168, 76, 0.7);
+      letter-spacing: 1px;
+    }
+    .controls.shirt-btn:hover {
+      border-color: rgba(201, 168, 76, 0.4);
+      color: #c9a84c;
+      background: rgba(201, 168, 76, 0.06);
+    }
+    .controls.shirt-btn.active {
+      border-color: rgba(201, 168, 76, 0.5);
+      color: #c9a84c;
+      background: rgba(201, 168, 76, 0.08);
+    }
+    .controls.shirt-btn .icon {
+      font-size: 14px;
+      line-height: 1;
+    }
+    
+    .controls.pause-btn {
+      border-color: rgba(201, 168, 76, 0.2);
+      color: rgba(201, 168, 76, 0.7);
+      letter-spacing: 1px;
+      min-width: 80px;
+    }
+    .controls.pause-btn:hover {
+      border-color: rgba(201, 168, 76, 0.4);
+      color: #c9a84c;
+      background: rgba(201, 168, 76, 0.06);
+    }
+    .controls.pause-btn.active {
+      border-color: rgba(201, 168, 76, 0.5);
+      color: #c9a84c;
+      background: rgba(201, 168, 76, 0.08);
+    }
+    .controls.pause-btn .icon {
+      font-size: 14px;
+      line-height: 1;
+    }
+    
+    .info-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 14px;
+      color: rgba(255,255,255,0.3);
+      font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+      font-size: 9px;
+      letter-spacing: 0.5px;
+      flex-wrap: wrap;
+      padding: 2px 0;
+    }
+    .info-row .info-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 12px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.04);
+      background: rgba(255,255,255,0.02);
+    }
+    .info-row .label {
+      color: rgba(255,255,255,0.25);
+      font-weight: 300;
+    }
+    .info-row .value {
+      color: rgba(255,255,255,0.6);
+      font-weight: 400;
+    }
+    .info-row .color-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.1);
+      flex-shrink: 0;
+    }
+    
+    .description {
+      display: block;
+      text-align: center;
+      color: rgba(255,255,255,0.25);
+      font-size: 8px;
+      letter-spacing: 1.2px;
+      line-height: 1.8;
+      padding: 2px 10px;
+      font-weight: 300;
+      max-width: 500px;
+      width: 100%;
+      text-transform: uppercase;
+    }
+    .description .highlight {
+      color: rgba(255,255,255,0.4);
+    }
+    .description .sep {
+      color: rgba(255,255,255,0.08);
+      margin: 0 4px;
+    }
+    
+    @media (max-width: 1024px) {
+      #main-container { padding: 16px; gap: 6px; }
+      .title-bar .title { font-size: 20px; letter-spacing: 6px; }
+      .controls { font-size: 10px; padding: 7px 16px; min-height: 34px; }
+      .info-row { font-size: 8.5px; gap: 12px; }
+      .info-row .info-item { padding: 2px 10px; }
+      .description { font-size: 7.5px; letter-spacing: 1px; }
+    }
+    @media (max-width: 768px) {
+      #main-container { padding: 12px; gap: 5px; }
+      .title-bar .title { font-size: 17px; letter-spacing: 5px; }
+      #canvas-container { padding: 0 6px; }
+      .controls { font-size: 9px; padding: 6px 14px; min-height: 32px; letter-spacing: 0.6px; }
+      .controls-row { gap: 6px; }
+      .info-row { font-size: 8px; gap: 10px; }
+      .info-row .info-item { padding: 2px 8px; }
+      .description { font-size: 7px; letter-spacing: 0.8px; padding: 2px 6px; }
+      .controls.shirt-btn .icon { font-size: 12px; }
+      .controls.pause-btn .icon { font-size: 12px; }
+    }
+    @media (max-width: 480px) {
+      #main-container { padding: 8px; gap: 4px; }
+      .title-bar .title { font-size: 14px; letter-spacing: 4px; }
+      #canvas-container { padding: 0 4px; }
+      .controls { font-size: 8px; padding: 5px 12px; min-height: 28px; border-radius: 24px; letter-spacing: 0.4px; }
+      .controls-row { gap: 4px; }
+      .info-row { font-size: 7px; gap: 8px; }
+      .info-row .info-item { padding: 2px 6px; gap: 4px; }
+      .description { font-size: 6.5px; letter-spacing: 0.6px; padding: 2px 4px; line-height: 1.6; }
+      .controls.shirt-btn .icon { font-size: 11px; }
+      .controls.pause-btn .icon { font-size: 11px; }
+      .info-row .color-dot { width: 8px; height: 8px; }
+    }
+    @media (max-width: 380px) {
+      #main-container { padding: 6px; gap: 3px; }
+      .title-bar .title { font-size: 12px; letter-spacing: 3px; }
+      #canvas-container { padding: 0 2px; }
+      .controls { font-size: 7px; padding: 4px 10px; min-height: 26px; border-radius: 20px; }
+      .info-row { font-size: 6.5px; gap: 6px; }
+      .info-row .info-item { padding: 1px 5px; border-radius: 14px; }
+      .description { font-size: 6px; letter-spacing: 0.5px; padding: 1px 3px; }
+      .controls.shirt-btn .icon { font-size: 10px; }
+      .controls.pause-btn .icon { font-size: 10px; }
+    }
+    @media (orientation: landscape) and (max-height: 500px) {
+      #main-container { padding: 10px 20px; gap: 4px; flex-direction: row; flex-wrap: wrap; }
+      .title-bar { width: 100%; flex-shrink: 0; }
+      .title-bar .title { font-size: 16px; letter-spacing: 4px; }
+      #canvas-container { flex: 1; min-height: 0; height: 100%; padding: 0 8px; }
+      .bottom-bar { width: auto; max-width: 180px; flex-shrink: 0; gap: 4px; padding: 0 4px; }
+      .controls { font-size: 8px; padding: 5px 12px; min-height: 28px; letter-spacing: 0.4px; }
+      .controls-row { flex-direction: column; gap: 4px; }
+      .info-row { font-size: 7px; gap: 6px; flex-direction: column; align-items: stretch; }
+      .info-row .info-item { padding: 2px 8px; justify-content: center; }
+      .description { font-size: 6px; max-width: 160px; padding: 1px 4px; line-height: 1.4; letter-spacing: 0.5px; }
+    }
+    @media (orientation: landscape) and (max-height: 380px) {
+      #main-container { padding: 6px 12px; gap: 3px; }
+      .title-bar .title { font-size: 13px; letter-spacing: 3px; }
+      #canvas-container { padding: 0 4px; }
+      .bottom-bar { max-width: 140px; gap: 3px; }
+      .controls { font-size: 7px; padding: 4px 10px; min-height: 24px; border-radius: 16px; }
+      .info-row { font-size: 6px; gap: 4px; }
+      .info-row .info-item { padding: 1px 6px; }
+      .description { font-size: 5.5px; max-width: 120px; padding: 1px 3px; }
+    }
+    @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+      #p5canvas canvas { image-rendering: pixelated; }
+    }
+    @supports (-webkit-touch-callout: none) {
+      .controls { min-height: 40px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .controls, #p5canvas canvas, #shirt-mockup { transition: none; }
+      #shirt-mockup.active { animation: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="main-container">
+
+  <div class="title-bar">
+    <div class="title"><span class="accent">Game of</span> Life</div>
+  </div>
+
+  <div id="canvas-container">
+    <div id="p5canvas">
+      <img id="shirt-mockup" src="Game-of-Life.jpg" alt="Game of Life on T-Shirt" />
+    </div>
+  </div>
+
+  <div class="bottom-bar">
+
+    <div class="controls-row">
+      <div class="controls" id="controlsBar">
+        <span class="key">●</span> regenerate <span class="sep">—</span> <span class="key">S</span> save
+      </div>
+      <div class="controls pause-btn" id="pauseToggle">
+        <span class="icon">⏸</span> <span id="pauseLabel">pause</span>
+      </div>
+      <div class="controls shirt-btn" id="shirtToggle">
+        <span class="icon">◷</span> apparel
+      </div>
+    </div>
+
+    <div class="info-row">
+      <div class="info-item">
+        <span class="label">grid</span>
+        <span class="value" id="gridDisplay">---</span>
+      </div>
+      <div class="info-item">
+        <span class="label">cells</span>
+        <span class="value" id="cellsDisplay">---</span>
+      </div>
+      <div class="info-item">
+        <span class="label">bg</span>
+        <span class="color-dot" id="bgColorDot"></span>
+      </div>
+      <div class="info-item">
+        <span class="label">fg</span>
+        <span class="color-dot" id="fgColorDot"></span>
+      </div>
+    </div>
+
+    <div class="description">
+      <span class="highlight">conway's game of life</span>
+      <span class="sep">·</span>
+      <span class="highlight">cellular automaton</span>
+      <span class="sep">·</span>
+      <span class="highlight">random seed</span>
+      <span class="sep">·</span>
+      <span class="highlight">infinite patterns</span>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+// ============================================
+// GAME OF LIFE — P5.JS T-SHIRT EDITION
+// ============================================
+
+let e = Math.min(innerWidth, innerHeight);
+const features = {};
+const isMob = /Android|webOS|iPhone|iPad|IEMobile|Opera Mini/i.test(navigator.userAgent);
+let A=[];
+let A1=[];
+let paused = false;
+let showingShirt = false;
+
+const container = document.getElementById('p5canvas');
+
+const sketch = function(p) {
+  p.setup = function() {
+    const rect = container.getBoundingClientRect();
+    let cWidth = rect.width;
+    let cHeight = rect.height;
+    const size = Math.min(cWidth, cHeight);
+    
+    const canvas = p.createCanvas(size, size);
+    canvas.parent(container);
+    
+    p.frameRate(10);
+
+    const backgroundColours = ['#000000','#040720','#0C090A','#151B54','#033E3E','#25383C','#2C3539',
+                                '#1F6357','#006A4E','#4B5320','#046307','#254117','#004225','#665D1E',
+                                '#483C32','#473810','#513B1C','#3D3635','#3B2F2F','#622F22','#560319',
+                                '#3F000F','#2F0909','#2B1B17','#36013F','#2E1A47','#583759','#551606'];
+    
+    const backgroundIndex = Math.floor(Math.random() * backgroundColours.length);
+    
+    const foregroundColours = ['#F5F5F5','#728FCE','#14A3C7','#C6DEFF','#01F9C6','#22CE83','#52D017',
+                               '#B0BF1A','#59E817','#E2F516','#EB5406','#FF6700','#F67280','#FF0080',
+                               '#F433FF','#C45AEC','#FFF9E3','#CCCCFF','#D291BC','#FFB8BF','#E799A3',
+                               '#F70D1A','#FF7722','#8B8000','#00FF00','#12E193','#7C9D8E','#16E2F5'];
+
+    const foregroundIndex = Math.floor(Math.random() * foregroundColours.length)
+    const NumOfdevisions = Math.floor(Math.random()*200+100)
+
+    features.backgroundColour = backgroundColours[backgroundIndex];
+    features.foregroundColour = foregroundColours[foregroundIndex]; 
+    features.Devitions=NumOfdevisions;
+
+    A=generateRandomMatrix(features.Devitions, features.Devitions);
+    A1=A;
+    
+    p.background(features.backgroundColour);
+    for(let j=1;j<features.Devitions-1;j++){
+      for(let i=1;i<features.Devitions-1;i++){
+        if(A[j][i]==1){
+          p.fill(features.foregroundColour);
+          p.noStroke();
+          p.square(i*size/features.Devitions, j*size/features.Devitions, size/features.Devitions);
+        }
+      }
+    }
+
+    (isMob) ? p.pixelDensity(1): p.pixelDensity(Math.min(window.devicePixelRatio || 1, 2));
+    updateUI();
+  };
+
+  p.draw = function() {
+    if (paused) return;
+
+    p.background(features.backgroundColour);
+
+    for(let j=1;j<features.Devitions-1;j++){
+      for(let i=1;i<features.Devitions-1;i++){
+        let a1=A[j-1][i-1];
+        let a2=A[j-1][i];
+        let a3=A[j-1][i+1];
+        let a4=A[j][i-1];
+        let a5=A[j][i+1];
+        let a6=A[j+1][i-1];
+        let a7=A[j+1][i];
+        let a8=A[j+1][i+1];
+        let b=A[j][i];
+
+        let neighbours=a1+a2+a3+a4+a5+a6+a7+a8;
+        if(b==1){
+          if(neighbours<2 || neighbours>3){
+            A1[j][i]=0;
+          }
+        }else if(neighbours==3){
+          A1[j][i]=1;
+        }
+      }
+    }
+
+    A=A1;
+
+    for(let j=1;j<features.Devitions-1;j++){
+      for(let i=1;i<features.Devitions-1;i++){
+        if(A[j][i]==1){
+          p.fill(features.foregroundColour);
+          p.noStroke();
+          p.square(i*p.width/features.Devitions, j*p.height/features.Devitions, p.width/features.Devitions);
+        }
+      }
+    }
+    
+    updateUI();
+  };
+
+  p.keyPressed = function() {
+    if (p.key === 's' || p.key === 'S') {
+      p.saveGif('Game_Of_Life', 30);
+    }
+  };
+};
+
+function generateRandomMatrix(rows, cols) {
+  let matrix = [];
+  for (let i = 0; i < rows; i++) {
+    let row = [];
+    for (let j = 0; j < cols; j++) {
+      if(i==0 || j==0 || i==rows-1 || j==cols-1){
+        row.push(0);
+      }
+      else{
+        row.push(Math.random() < 0.06 ? 1 : 0);
+      }
+    }
+    matrix.push(row);
+  }
+  return matrix;
+}
+
+function updateUI() {
+  document.getElementById('gridDisplay').textContent = features.Devitions + '×' + features.Devitions;
+  
+  let liveCount = 0;
+  if (A && A.length > 0) {
+    for (let j = 1; j < features.Devitions - 1; j++) {
+      for (let i = 1; i < features.Devitions - 1; i++) {
+        if (A[j] && A[j][i] === 1) liveCount++;
+      }
+    }
+  }
+  document.getElementById('cellsDisplay').textContent = liveCount;
+  document.getElementById('bgColorDot').style.background = features.backgroundColour;
+  document.getElementById('fgColorDot').style.background = features.foregroundColour;
+}
+
+function regenerate() {
+  const p5canvas = document.querySelector('#p5canvas canvas');
+  if (p5canvas) {
+    p5canvas.remove();
+  }
+  new p5(sketch);
+  if (showingShirt) {
+    // Keep showing shirt after regenerate
+  }
+}
+
+function togglePause() {
+  paused = !paused;
+  const btn = document.getElementById('pauseToggle');
+  const label = document.getElementById('pauseLabel');
+  
+  if (paused) {
+    btn.classList.add('active');
+    label.textContent = 'resume';
+    btn.querySelector('.icon').textContent = '▶';
+  } else {
+    btn.classList.remove('active');
+    label.textContent = 'pause';
+    btn.querySelector('.icon').textContent = '⏸';
+  }
+}
+
+function toggleShirt() {
+  showingShirt = !showingShirt;
+  const p5canvas = document.getElementById('p5canvas');
+  const shirtMockup = document.getElementById('shirt-mockup');
+  const shirtToggle = document.getElementById('shirtToggle');
+  
+  if (showingShirt) {
+    // Hide canvas, show shirt mockup
+    const canvas = p5canvas.querySelector('canvas');
+    if (canvas) canvas.style.display = 'none';
+    shirtMockup.classList.add('active');
+    shirtToggle.classList.add('active');
+    shirtToggle.innerHTML = '<span class="icon">◷</span> artwork';
+  } else {
+    // Show canvas, hide shirt mockup
+    const canvas = p5canvas.querySelector('canvas');
+    if (canvas) canvas.style.display = 'block';
+    shirtMockup.classList.remove('active');
+    shirtToggle.classList.remove('active');
+    shirtToggle.innerHTML = '<span class="icon">◷</span> apparel';
+  }
+}
+
+// --- KEYBOARD ---
+document.addEventListener('keydown', function(e) {
+  if (e.key === 's' || e.key === 'S') {
+    e.preventDefault();
+    const p5canvas = document.querySelector('#p5canvas canvas');
+    if (p5canvas && p5canvas._p5) {
+      p5canvas._p5.saveGif('Game_Of_Life', 30);
+    }
+  }
+  if (e.key === 'r' || e.key === 'R') {
+    e.preventDefault();
+    regenerate();
+  }
+  if (e.key === ' ' || e.key === 'p' || e.key === 'P') {
+    if (e.target.tagName !== 'INPUT') {
+      e.preventDefault();
+      togglePause();
+    }
+  }
+  if (e.key === 't' || e.key === 'T') {
+    e.preventDefault();
+    toggleShirt();
+  }
+});
+
+// --- CONTROLS ---
+document.getElementById('controlsBar').addEventListener('click', regenerate);
+document.getElementById('controlsBar').addEventListener('touchend', function(e) {
+  e.preventDefault();
+  regenerate();
+});
+
+document.getElementById('pauseToggle').addEventListener('click', togglePause);
+document.getElementById('pauseToggle').addEventListener('touchend', function(e) {
+  e.preventDefault();
+  togglePause();
+});
+
+document.getElementById('shirtToggle').addEventListener('click', toggleShirt);
+document.getElementById('shirtToggle').addEventListener('touchend', function(e) {
+  e.preventDefault();
+  toggleShirt();
+});
+
+// --- RESIZE ---
+let resizeTimeout;
+function handleResize() {
+  clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(() => {
+    const newE = Math.min(innerWidth, innerHeight);
+    if (Math.abs(newE - e) > 50) {
+      e = newE;
+      regenerate();
+    }
+  }, 300);
+}
+
+window.addEventListener('resize', handleResize);
+window.addEventListener('orientationchange', function() {
+  setTimeout(handleResize, 400);
+});
+
+// --- LOAD P5 ---
+const script = document.createElement('script');
+script.src = 'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js';
+script.onload = function() {
+  const gifScript = document.createElement('script');
+  gifScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/addons/p5.sound.min.js';
+  gifScript.onload = function() {
+    new p5(sketch);
+    console.log('Game of Life loaded');
+    console.log('Press Space/P to pause/resume');
+    console.log('Press S to save as GIF');
+    console.log('Press R to regenerate');
+    console.log('Press T for apparel view');
+  };
+  document.head.appendChild(gifScript);
+};
+document.head.appendChild(script);
+</script>
+</body>
+</html>
